@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: ChatAppZalo
+  profiles:
+    active: dev           # mặc định chạy dev, khi deploy prod thì override bằng -Dspring.profiles.active=prod hoặc env
+
+spring.devtools.livereload.enabled: false
+
+spring.jackson.time-zone: GMT+7
+
+server:
+  tomcat:
+    relaxed-query-chars: "|,{,},[,],^,`,{,},<,>"
+    redirect-context-root: false

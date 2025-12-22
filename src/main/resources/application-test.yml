@@ -1,0 +1,61 @@
+---
+spring:
+  config:
+    activate:
+      on-profile: test    # Đây là cách viết đúng và bắt buộc có "---" ở đầu
+
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/chatapp_test?innodb_lock_wait_timeout=100
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # Nếu muốn dùng H2 in-memory cho test nhanh hơn (khuyên dùng):
+    # url: jdbc:h2:mem:chatapp_test;DB_CLOSE_DELAY=-1;MODE=MySQL
+    # driver-class-name: org.h2.Driver
+    # username: sa
+    # password:
+
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    hibernate:
+      ddl-auto: create-drop   # Tạo mới bảng mỗi lần chạy test
+
+  mail:
+    host: localhost
+    port: 1025                # MailHog mặc định là 1025
+    username:
+    password:
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# JWT cho test - ngắn hơn, dễ debug
+jwt:
+  token:
+    expiration:
+      time: 600000        # 10 phút
+    refresh:
+      expiration:
+        time: 3600000     # 1 giờ
+    secret: TEST_SECRET_KEY_1234567890_TEST_PURPOSE_ONLY
+    prefix: Bearer
+    authorization: Authorization
+
+# Cloudinary test (dùng cloudinary miễn phí hoặc mock)
+cloudinary:
+  cloud-name: dpjudp4iw
+  api-key: 891445718184817
+  api-secret: QFqkDhHlGWmTLJBVibUFTxEDAOg
+  # Nếu muốn mock Cloudinary khi test thì có thể override trong @MockBean
