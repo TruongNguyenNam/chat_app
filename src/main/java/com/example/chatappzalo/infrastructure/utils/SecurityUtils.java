@@ -21,4 +21,9 @@ public final class SecurityUtils {
         UserPrincipal user = getCurrentUser();
         return user != null ? user.getId() : null;
     }
+
+    public static String getCurrentUserName() {
+        UserPrincipal user = getCurrentUser();
+        return user != null ? user.getUsername() : null;
+    }
 }

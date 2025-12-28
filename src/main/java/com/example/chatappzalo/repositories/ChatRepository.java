@@ -43,6 +43,7 @@ public interface ChatRepository extends JpaRepository<Chat,Long> {
     List<Chat> findAllChatsOfUser(@Param("userId") Long userId);
 
 
+    boolean existsByChatName(String chatName);
 
 
 }

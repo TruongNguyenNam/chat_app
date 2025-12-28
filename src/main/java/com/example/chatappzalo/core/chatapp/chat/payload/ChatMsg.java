@@ -1,22 +1,18 @@
 package com.example.chatappzalo.core.chatapp.chat.payload;
 
 import com.example.chatappzalo.entity.Chat;
-import com.example.chatappzalo.entity.ChatMember;
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatRequestDTO {
+@Builder
+public class ChatMsg {
+    private Chat.ChatType chatType;     // GROUP_CREATED, NEW_MESSAGE, ...
+    private Long chatId;
     private String chatName;
-    private List<Long> userId;
-
+    private Long createdBy;
 }

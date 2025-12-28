@@ -1,13 +1,17 @@
 package com.example.chatappzalo.service.message.impl;
 
+import com.example.chatappzalo.core.chatapp.chat.presence.ActiveChatTracker;
 import com.example.chatappzalo.core.chatapp.message.payload.ChatMessage;
 import com.example.chatappzalo.core.chatapp.message.payload.MessageRequestDTO;
 import com.example.chatappzalo.core.chatapp.message.payload.MessageResponseDTO;
+import com.example.chatappzalo.core.chatapp.notification.payload.NotificationMsg;
+import com.example.chatappzalo.core.chatapp.notification.payload.NotificationRequestDTO;
 import com.example.chatappzalo.entity.*;
 import com.example.chatappzalo.infrastructure.utils.SecurityUtils;
 import com.example.chatappzalo.repositories.*;
 import com.example.chatappzalo.service.cloudinary.CloudinaryService;
 import com.example.chatappzalo.service.message.MessageService;
+import com.example.chatappzalo.service.notification.NotificationService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -19,9 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,7 +44,12 @@ public class MessageServiceImpl implements MessageService {
 
     private final SimpMessageSendingOperations messagingTemplate;
 
+    private final ActiveChatTracker activeChatTracker;
+
     private final CloudinaryService cloudinaryService;
+
+    private final NotificationService notificationService;
+
 
     @Override
     @Transactional
@@ -157,10 +164,68 @@ public class MessageServiceImpl implements MessageService {
 
         messagingTemplate.convertAndSend("/topic/chat/" + chat.getId(), chatMessage);
 
-        // Optional: Cập nhật last activity của chat
+        // 1️⃣ Lấy danh sách tất cả thành viên chat (userId + username)
+        List<ChatMember> members = chatMemberRepository.findByChatId(chat.getId());
+
+        Map<Long, String> userIdToUsername = members.stream()
+                .collect(Collectors.toMap(
+                        cm -> cm.getUser().getId(),
+                        cm -> cm.getUser().getUsername()
+                ));
+
+// 2️⃣ Danh sách userId
+        List<Long> memberUserIds = new ArrayList<>(userIdToUsername.keySet());
+
+// 3️⃣ Những người đang mở chat này
+        Set<Long> activeUsersInThisChat =
+                activeChatTracker.getActiveUsersInChat(chat.getId());
+
+// 4️⃣ Lọc userId cần nhận notification
+        List<Long> receiverUserIds = memberUserIds.stream()
+                .filter(userId -> !userId.equals(senderId))                 // không gửi cho người gửi
+                .filter(userId -> !activeUsersInThisChat.contains(userId)) // không gửi người đang mở chat
+                .toList();
+
+        if (!receiverUserIds.isEmpty()) {
+
+            log.info("Có {} người cần nhận notification", receiverUserIds.size());
+
+            // 5️⃣ Convert sang username để gửi WebSocket
+            List<String> receiverUsernames = receiverUserIds.stream()
+                    .map(userIdToUsername::get)
+                    .filter(Objects::nonNull)
+                    .toList();
+
+            // 6️⃣ Tạo notification real-time
+            NotificationMsg realTimeMsg = new NotificationMsg();
+            realTimeMsg.setType(Notification.NotificationType.MESSAGE);
+            realTimeMsg.setContent("Bạn có tin nhắn mới từ " + sender.getFullName());
+            realTimeMsg.setRelatedId(chat.getId());
+            realTimeMsg.setSenderId(senderId);
+            realTimeMsg.setSenderUsername(sender.getUsername());
+            realTimeMsg.setSenderDisplayName(sender.getFullName());
+            realTimeMsg.setSenderAvatar(sender.getAvatarUrl());
+            realTimeMsg.setTimestamp(LocalDateTime.now());
+
+            // 7️⃣ GỬI REALTIME (username)
+            notificationService.sendToUsersV2(receiverUsernames, realTimeMsg);
+
+            // 8️⃣ LƯU DB (userId)
+            for (Long receiverId : receiverUserIds) {
+                NotificationRequestDTO requestDTO = new NotificationRequestDTO();
+                requestDTO.setUserId(receiverId);
+                requestDTO.setType(Notification.NotificationType.MESSAGE);
+                requestDTO.setContent(sender.getFullName() + " đã gửi một tin nhắn");
+                requestDTO.setRelatedId(chat.getId());
+
+                notificationService.createNotification(requestDTO);
+            }
+        }
+
+// 9️⃣ Cập nhật chat
         chat.setLastModifiedDate(LocalDateTime.now());
-        // nếu có trường lastMessage preview: chat.setLastMessagePreview(...);
         chatRepository.save(chat);
+
     }
 
 
@@ -184,6 +249,7 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
+    @Transactional
     public List<MessageResponseDTO> findByChatId(Long chatId) {
         List<Message> messages = messageRepository.findByChatId(chatId);
         return messages.stream().map(this::mapToResponse).collect(Collectors.toList());
@@ -193,6 +259,16 @@ public class MessageServiceImpl implements MessageService {
     @Transactional
     public void markMessagesAsRead(Long userId, Long chatId) {
         messageRepository.updateIsReadByChatIdAndSenderIdNot(chatId, userId, true);
+    }
+
+    @Override
+    @Transactional
+    public void deleteMessage(Long messageId) {
+        Message message = messageRepository.findById(messageId).orElseThrow(
+                () -> new IllegalArgumentException("không tìm thấy tin nhắn này")
+        );
+        message.setDeleted(true);
+        messageRepository.save(message);
     }
 
     private MessageResponseDTO mapToResponse(Message message){

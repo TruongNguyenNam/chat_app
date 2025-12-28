@@ -10,9 +10,16 @@ import java.util.List;
 
 public interface MessageService {
 
-    void sendMessage(MessageRequestDTO request, MultipartFile[] files) throws IOException;
+     void sendMessage(MessageRequestDTO request, MultipartFile[] files) throws IOException;
 
-    List<MessageResponseDTO> findByChatId(Long chatId);
+     List<MessageResponseDTO> findByChatId(Long chatId);
      void markMessagesAsRead(Long userId, Long chatId);
+
+     void deleteMessage(Long messageId);
+
+
+
+
+
 
 }

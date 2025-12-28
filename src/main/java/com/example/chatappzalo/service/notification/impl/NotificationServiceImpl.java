@@ -1,5 +1,6 @@
 package com.example.chatappzalo.service.notification.impl;
 
+import com.example.chatappzalo.core.chatapp.notification.payload.NotificationMsg;
 import com.example.chatappzalo.core.chatapp.notification.payload.NotificationRequestDTO;
 import com.example.chatappzalo.core.chatapp.notification.payload.NotificationResponseDTO;
 import com.example.chatappzalo.entity.Notification;
@@ -12,6 +13,7 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -26,17 +28,32 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final UserRepository userRepository;
 
+    private final SimpMessagingTemplate messagingTemplate;
+
+//    public void sendToUsers(List<Long> userIds, NotificationMsg notificationMsg) {
+//        log.info("GỬI NOTIFICATION REAL-TIME cho {} người: {}", userIds.size(), notificationMsg);
+//        for (Long userId : userIds) {
+//            messagingTemplate.convertAndSendToUser(
+//                    userId.toString(),
+//                    "/notifications",  // frontend sẽ subscribe /user/notifications
+//                    notificationMsg
+//            );
+//        }
+//    }
+
     @Override
-    @Transactional
-    public List<NotificationResponseDTO> getMyNotifications() {
-        Long userId = SecurityUtils.getCurrentUserId();
-        List<Notification> notification = notificationRepository.findByUserIdOrderByCreatedDateDesc(userId);
-        return notification.stream()
-                .map(this::fromEntity)
-                .collect(Collectors.toList());
+    public void sendToUsersV2(List<String> usernames, NotificationMsg msg) {
+        if (usernames == null || usernames.isEmpty()) return;
+
+        usernames.forEach(username -> {
+            log.debug("Send WS notification to {}", username);
+            messagingTemplate.convertAndSendToUser(
+                    username,
+                    "/queue/notifications",
+                    msg
+            );
+        });
     }
-
-
 
     @Override
     @Transactional
@@ -54,6 +71,26 @@ public class NotificationServiceImpl implements NotificationService {
         notificationRepository.save(notification);
 
 
+    }
+
+    @Override
+    @Transactional
+    public List<NotificationResponseDTO> getMyNotifications() {
+        Long userId = SecurityUtils.getCurrentUserId();
+        List<Notification> notification = notificationRepository.findByUserIdOrderByCreatedDateDesc(userId);
+        return notification.stream()
+                .map(this::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+
+
+
+    @Override
+    @Transactional
+    public Long countNotification() {
+        Long currentId = SecurityUtils.getCurrentUserId();
+        return notificationRepository.countUnreadByUserId(currentId);
     }
 
 

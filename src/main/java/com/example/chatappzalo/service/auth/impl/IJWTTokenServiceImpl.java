@@ -70,9 +70,14 @@ public class IJWTTokenServiceImpl implements JWTTokenService {
             throw new IllegalArgumentException("Không tìm thấy người dùng: " + username);
         }
         Claims claims = Jwts.claims().setSubject(username);
+                                        // vì setSubjcet vào chính truc tiép vào đây nên mội thứ trong
+                                        // Jwt khi bắn ra sẽ đều phải chạy trong Principal chỉ là đại diện
+
 //        claims.put("userId", Math.toIntExact(user.getId()));
         claims.put("userId", user.getId());
         claims.put("role",user.getRole().name());
+
+        claims.put("fullName",user.getFullName());
         log.info("Tạo token cho user: {}, userId: {}, thời gian: {}", username, user.getId(), now);
         String token = Jwts.builder()
                 .setClaims(claims)
@@ -89,46 +94,104 @@ public class IJWTTokenServiceImpl implements JWTTokenService {
     @Transactional
     public Authentication parseTokenToUserInformation(String token) {
 
+        // 1️⃣ Token null hoặc rỗng → không xác thực được
         if (token == null || token.isBlank()) {
             return null;
         }
 
         try {
+            // 2️⃣ Dùng secret key để verify + parse JWT
             Claims claims = Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey())
-                    .setAllowedClockSkewSeconds(60)
+                    .setSigningKey(getSigningKey())       // key ký token
+                    .setAllowedClockSkewSeconds(60)       // cho phép lệch giờ 60s
                     .build()
-                    .parseClaimsJws(token)
-                    .getBody();
+                    .parseClaimsJws(token)                // verify chữ ký + parse
+                    .getBody();                           // lấy payload (claims)
 
-            String username = claims.getSubject();
+            // 3️⃣ Lấy dữ liệu đã put khi generateJWT
+            String username = claims.getSubject();        // sub → username
             Long userId = claims.get("userId", Long.class);
             String role = claims.get("role", String.class);
-
+            // thêm phần fullName mới mục đích sau này để bắn lên thông tin ui người sử dụng
+            String fullName = claims.get("fullName", String.class);
+            // 4️⃣ Thiếu dữ liệu quan trọng → token không hợp lệ
             if (username == null || userId == null || role == null) {
                 return null;
             }
 
+            // 5️⃣ Tạo Principal (đại diện cho user trong Spring Security)
             UserPrincipal principal = new UserPrincipal(
-                    userId,
-                    username,
-                    AuthorityUtils.createAuthorityList(role)
+                    userId,                               // id user
+                    username,// username (routing WS)
+                    fullName,
+                    AuthorityUtils.createAuthorityList(role) // ROLE_*
             );
 
+            // 6️⃣ Gói Principal vào Authentication
+            // Authentication = danh tính user + quyền
             return new UsernamePasswordAuthenticationToken(
-                    principal,
-                    null,
-                    principal.getAuthorities()
+                    principal,                            // 👈 sẽ thành Principal
+                    null,                                 // không cần password
+                    principal.getAuthorities()            // quyền
             );
 
         } catch (ExpiredJwtException e) {
+            // 7️⃣ Token hết hạn
             log.warn("Token hết hạn");
         } catch (Exception e) {
+            // 8️⃣ Token sai chữ ký / format
             log.warn("Token không hợp lệ: {}", e.getMessage());
         }
 
+        // 9️⃣ Parse thất bại → không xác thực
         return null;
     }
+
+
+//    @Override
+//    @Transactional
+//    public Authentication parseTokenToUserInformation(String token) {
+//
+//        if (token == null || token.isBlank()) {
+//            return null;
+//        }
+//
+//        try {
+//            Claims claims = Jwts.parserBuilder()
+//                    .setSigningKey(getSigningKey())
+//                    .setAllowedClockSkewSeconds(60)
+//                    .build()
+//                    .parseClaimsJws(token)
+//                    .getBody();
+//
+//            String username = claims.getSubject();
+//            Long userId = claims.get("userId", Long.class);
+//            String role = claims.get("role", String.class);
+//
+//            if (username == null || userId == null || role == null) {
+//                return null;
+//            }
+//
+//            UserPrincipal principal = new UserPrincipal(
+//                    userId,
+//                    username,
+//                    AuthorityUtils.createAuthorityList(role)
+//            );
+//
+//            return new UsernamePasswordAuthenticationToken(
+//                    principal,
+//                    null,
+//                    principal.getAuthorities()
+//            );
+//
+//        } catch (ExpiredJwtException e) {
+//            log.warn("Token hết hạn");
+//        } catch (Exception e) {
+//            log.warn("Token không hợp lệ: {}", e.getMessage());
+//        }
+//
+//        return null;
+//    }
 
 
 //    @Override

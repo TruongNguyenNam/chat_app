@@ -18,6 +18,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -30,7 +31,6 @@ public class IAuthService implements AuthService {
 
     private final ModelMapper modelMapper;
 
-
     private final UserRepository userRepository;
 
     private final IJWTTokenServiceImpl ijwtTokenService;
@@ -39,9 +39,15 @@ public class IAuthService implements AuthService {
 
 
     @Override
+    @Transactional
     public LoginInfoDto login(String username) {
 
         User entity = service.getAccountByUsername(username);
+
+        entity.setIsOnline(true);
+        entity.setLastLogin(LocalDateTime.now());
+        entity.setLastActive(LocalDateTime.now());
+        userRepository.save(entity);
 
         LoginInfoDto dto = modelMapper.map(entity, LoginInfoDto.class);
 
@@ -53,6 +59,17 @@ public class IAuthService implements AuthService {
         return dto;
 
     }
+
+    @Override
+    @Transactional
+    public void logout(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User không tồn tại"));
+
+        user.setIsOnline(false);
+        user.setLastActive(LocalDateTime.now());
+    }
+
 
     @Override
     @Transactional

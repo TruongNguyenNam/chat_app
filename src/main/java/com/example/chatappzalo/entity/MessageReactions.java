@@ -17,7 +17,7 @@ public class MessageReactions extends Auditable{
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String reaction;
+    private String reaction;  //các sticker emoji
 
     @ManyToOne
     @JoinColumn(name = "message_id")

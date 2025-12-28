@@ -14,7 +14,6 @@ public interface ContactRepository extends JpaRepository<Contact,Long> {
     boolean existsByUserIdAndFriendId(Long userId, Long friendId);
 
 
-
     @Query("""
         select c from Contact c
         where c.friend.id = :userId

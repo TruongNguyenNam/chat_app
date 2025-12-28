@@ -50,7 +50,7 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
         }
 
         // 2. Bỏ qua auth endpoint
-        if (path.startsWith("/api/v1/auth/")) {
+        if (path.startsWith("/api/v1/auth/login")) {
             filterChain.doFilter(request, response);
             return;
         }

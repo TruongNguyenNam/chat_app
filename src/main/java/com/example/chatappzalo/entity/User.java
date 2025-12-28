@@ -43,6 +43,12 @@ public class User extends Auditable{
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
+    @Column(name = "is_online")
+    private Boolean isOnline = false;  // false: online, true : offline
+
+    @Column(name = "last_active")
+    private LocalDateTime lastActive;
+
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     private Set<ChatMember> members = new HashSet<>();
 

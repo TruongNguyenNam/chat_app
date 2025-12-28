@@ -41,10 +41,10 @@ public class SecurityConfig  {
 //                        .requestMatchers("/ws/**", "/ws").permitAll()
                         .requestMatchers("/api/v1/auth/login").permitAll()
 //                        .requestMatchers("/api/v1/contact/**").hasAnyAuthority("ADMIN")
-                 //.requestMatchers("/api/v1/product/**").anonymous()
                         .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/logout").hasAnyAuthority("CUSTOMER")
                        // .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .anyRequest().permitAll())
+                        .anyRequest().authenticated())
 
                 .httpBasic(withDefaults()) // Sử dụng xác thực cơ bản
                 .addFilterBefore(jwtAuthorizationFilter, UsernamePasswordAuthenticationFilter.class)

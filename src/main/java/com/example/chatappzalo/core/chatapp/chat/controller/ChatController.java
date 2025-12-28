@@ -1,5 +1,6 @@
 package com.example.chatappzalo.core.chatapp.chat.controller;
 
+import com.example.chatappzalo.core.chatapp.chat.payload.ChatRequestDTO;
 import com.example.chatappzalo.core.chatapp.chat.payload.ChatResponseDTO;
 import com.example.chatappzalo.core.chatapp.contact.payload.ContactResponseDTO;
 import com.example.chatappzalo.infrastructure.utils.ResponseData;
@@ -7,10 +8,7 @@ import com.example.chatappzalo.service.chat.ChatService;
 import com.example.chatappzalo.service.contact.ContactService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -45,6 +43,19 @@ public class ChatController {
                 .data(chatResponseDTOS)
                 .build();
     }
+
+
+    @PostMapping
+    public ResponseData<Void> createGroupChat(
+            @RequestBody ChatRequestDTO chatRequestDTO) {
+        chatService.createChatGroup(chatRequestDTO);
+        return ResponseData.<Void>builder()
+                .status(201)
+                .message("Tạo nhóm chat thành công")
+                .data(null)
+                .build();
+    }
+
 
 
 

@@ -1,11 +1,13 @@
 package com.example.chatappzalo.infrastructure.configuration.stocket;
 
 import com.example.chatappzalo.infrastructure.security.UserPrincipal;
+import com.example.chatappzalo.infrastructure.utils.StompPrincipal;
 import com.example.chatappzalo.service.auth.JWTTokenService;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.MessagingException;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
@@ -22,6 +24,9 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+
+import java.util.concurrent.ConcurrentHashMap;
+
 @Configuration
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
@@ -43,6 +48,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.setUserDestinationPrefix("/user"); // cho private message
     }
 
+
+
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(new ChannelInterceptor() {
@@ -58,39 +65,82 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 if (StompCommand.CONNECT.equals(accessor.getCommand())) {
 
                     String authHeader = accessor.getFirstNativeHeader("Authorization");
-
                     if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                        throw new org.springframework.messaging.MessagingException(
-                                "Missing Authorization Bearer token"
-                        );
+                        throw new MessagingException("Missing Authorization header");
                     }
 
-                    String token = authHeader.substring(7);
-                    Authentication auth = jwtTokenService.parseTokenToUserInformation(token);
+                    Authentication auth =
+                            jwtTokenService.parseTokenToUserInformation(authHeader.substring(7));
 
-                    if (auth == null || !auth.isAuthenticated()) {
-                        throw new org.springframework.messaging.MessagingException(
-                                "Invalid or expired JWT token"
-                        );
-                    }
+                    UserPrincipal user = (UserPrincipal) auth.getPrincipal();
 
-                    log.info("Principal name (auth.getName()) = {}", auth.getName());
+                    accessor.setUser(new StompPrincipal(user.getUsername()));
 
-                    accessor.setUser(auth);
+                    accessor.setSessionAttributes(new ConcurrentHashMap<>());
+                    accessor.getSessionAttributes().put("userId", user.getId());
+                    accessor.getSessionAttributes().put("username", user.getUsername());
+                    accessor.getSessionAttributes().put("fullName", user.getFullName());
 
-                    UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
-
-                    accessor.getSessionAttributes().put("userId", principal.getId());
-                    accessor.getSessionAttributes().put("username", principal.getUsername());
-
-                    log.info("WebSocket CONNECT OK – userId={}, username={}",
-                            principal.getId(), principal.getUsername());
+                    log.info("WS CONNECT: {}", user.getUsername());
                 }
 
                 return message;
             }
         });
     }
+
+//    @Override
+//    public void configureClientInboundChannel(ChannelRegistration registration) {
+//        registration.interceptors(new ChannelInterceptor() {
+//
+//            @Override
+//            public Message<?> preSend(Message<?> message, MessageChannel channel) {
+//
+//                StompHeaderAccessor accessor =
+//                        MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+//
+//                if (accessor == null) return message;
+//
+//
+//                if (StompCommand.CONNECT.equals(accessor.getCommand())) {
+//
+//                    if (accessor.getSessionAttributes() == null) {
+//                        accessor.setSessionAttributes(new ConcurrentHashMap<>());
+//                    }
+//
+//                    String authHeader = accessor.getFirstNativeHeader("Authorization");
+//
+//                    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+//                        throw new org.springframework.messaging.MessagingException(
+//                                "Missing Authorization Bearer token"
+//                        );
+//                    }
+//
+//                    String token = authHeader.substring(7);
+//                    Authentication auth = jwtTokenService.parseTokenToUserInformation(token);
+//
+//                    if (auth == null || !auth.isAuthenticated()) {
+//                        throw new org.springframework.messaging.MessagingException(
+//                                "Invalid or expired JWT token"
+//                        );
+//                    }
+//
+//                    log.info("Principal name (auth.getName()) = {}", auth.getName());
+//
+//                    accessor.setUser(auth);
+//                    UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+//
+//                    accessor.getSessionAttributes().put("userId", principal.getId());
+//                    accessor.getSessionAttributes().put("username", principal.getUsername());
+//                    accessor.getSessionAttributes().put("fullName", principal.getFullName());
+//                    log.info("WebSocket CONNECT OK – userId={}, username={}, fullName = {}",
+//                            principal.getId(), principal.getUsername(), principal.getFullName());
+//                }
+//
+//                return message;
+//            }
+//        });
+//    }
 
 
 //    @Override

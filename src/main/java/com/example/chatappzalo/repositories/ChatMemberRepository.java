@@ -3,11 +3,16 @@ import com.example.chatappzalo.entity.Auditable;
 import com.example.chatappzalo.entity.ChatMember;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
+
 
 public interface ChatMemberRepository extends JpaRepository<ChatMember,Long> {
 
     //kiểm tra có trong cuộc trò chuyện hay không
     boolean existsByChatIdAndUserId(Long chatId, Long SenderId);
+
+    List<ChatMember> findByChatId(Long chatId);
+
 
 }
 

@@ -29,16 +29,16 @@ public class WebSocketEventListener {
         }
 
         String username = (String) headerAccessor.getSessionAttributes().get("username");
-
+        String fullName = (String) headerAccessor.getSessionAttributes().get("fullName");
         Number userIdNum = (Number) headerAccessor.getSessionAttributes().get("userId");
         Long userId = userIdNum != null ? userIdNum.longValue() : null;
 
-        if (username != null) {
-            log.info("User connected: {} (userId: {})", username, userId);
+        if (fullName != null) {
+            log.info("User connected: {} (userId: {})", fullName, userId);
 
             ChatMessage chatMessage = ChatMessage.builder()
 //                    .type(ChatMessage.MessageType.JOIN)
-                    .senderName(username)
+                    .senderName(fullName)
                     .build();
 
             messagingTemplate.convertAndSend("/topic/public", chatMessage);
@@ -56,13 +56,13 @@ public class WebSocketEventListener {
         }
 
         String username = (String) headerAccessor.getSessionAttributes().get("username");
-
-        if (username != null) {
-            log.info("User disconnected: {}", username);
+        String fullName = (String) headerAccessor.getSessionAttributes().get("fullName");
+        if (fullName != null) {
+            log.info("User disconnected: {}", fullName);
 
             ChatMessage chatMessage = ChatMessage.builder()
 //                    .type(ChatMessage.MessageType.LEAVE)
-                    .senderName(username)
+                    .senderName(fullName)
                     .build();
 
             messagingTemplate.convertAndSend("/topic/public", chatMessage);

@@ -13,7 +13,7 @@ import java.util.List;
 @Configuration
 public class OpenAPIConfig {
     private final String devUrl = "http://localhost:8080";
-    private final String prodUrl = "https://api.storesports.com";
+    private final String prodUrl = "https://api.chatapp.com";
 
     @Bean
     public OpenAPI customOpenAPI() {

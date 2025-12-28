@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -100,6 +101,16 @@ public class MessageController {
         }
     }
 
+    @DeleteMapping("/chat/{messageId}")
+    public ResponseData<Void> delete(
+            @PathVariable(name = "messageId") Long messageId
+            ) {
+       messageService.deleteMessage(messageId);
+       return ResponseData.<Void>builder()
+               .message("đã xoá tin nhắn thành công")
+               .status(201)
+               .build();
+    }
 
 
 
