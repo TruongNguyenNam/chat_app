@@ -13,9 +13,13 @@ public interface MessageService {
      void sendMessage(MessageRequestDTO request, MultipartFile[] files) throws IOException;
 
      List<MessageResponseDTO> findByChatId(Long chatId);
-     void markMessagesAsRead(Long userId, Long chatId);
+     void markChatAsRead(Long chatId);  // đọc tin nhắn đã chuyển qua chat rồi
 
-     void deleteMessage(Long messageId);
+//     void deleteMessage(Long messageId);
+
+
+      Long deleteMessage(Long messageId);
+
 
 
 

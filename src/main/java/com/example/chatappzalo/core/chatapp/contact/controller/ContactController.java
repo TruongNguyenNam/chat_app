@@ -35,7 +35,7 @@ public class ContactController {
     
 
     @PostMapping("/send")
-    public ResponseData<Void> getPendingRequests(@RequestBody ContactRequestDTO contactRequestDTO) {
+    public ResponseData<Void> sendFiends(@RequestBody ContactRequestDTO contactRequestDTO) {
         contactService.addFriend(contactRequestDTO);
 
         return ResponseData.<Void>builder()

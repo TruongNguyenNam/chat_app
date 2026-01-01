@@ -1,5 +1,6 @@
 package com.example.chatappzalo.service.chat.impl;
 
+import com.example.chatappzalo.core.chatapp.chat.payload.ChatReadStatusMsg;
 import com.example.chatappzalo.core.chatapp.chat.payload.ChatRequestDTO;
 import com.example.chatappzalo.core.chatapp.chat.payload.ChatResponseDTO;
 import com.example.chatappzalo.core.chatapp.media.payload.MediaResponseDTO;
@@ -7,16 +8,22 @@ import com.example.chatappzalo.entity.*;
 import com.example.chatappzalo.infrastructure.utils.SecurityUtils;
 import com.example.chatappzalo.repositories.ChatMemberRepository;
 import com.example.chatappzalo.repositories.ChatRepository;
+import com.example.chatappzalo.repositories.MessageRepository;
 import com.example.chatappzalo.repositories.UserRepository;
 import com.example.chatappzalo.service.chat.ChatService;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +36,8 @@ public class ChatServiceImpl implements ChatService {
     private final ChatMemberRepository chatMemberRepository;
 
     private final UserRepository userRepository;
+
+    private final MessageRepository messageRepository;
 
     private final SimpMessageSendingOperations messagingTemplate;
     @Override
@@ -83,6 +92,139 @@ public class ChatServiceImpl implements ChatService {
 
     }
 
+//    @Override
+//    @Transactional
+//    public void markChatAsRead(Long chatId) {
+//
+//        Long userId = SecurityUtils.getCurrentUserId();
+//
+//        log.info("[CHAT-READ] User {} bắt đầu đánh dấu đã đọc chat {}", userId, chatId);
+//
+//        ChatMember member = chatMemberRepository
+//                .findByChatIdAndUserId(chatId, userId)
+//                .orElseThrow(() -> {
+//                    log.warn("[CHAT-READ] User {} không phải member của chat {}", userId, chatId);
+//                    return new EntityNotFoundException("Không phải thành viên chat");
+//                });
+//
+//        Long lastMessageId = messageRepository
+//                .findTopByChatIdOrderByIdDesc(chatId)
+//                .map(Message::getId)
+//                .orElse(null);
+//
+//        if (lastMessageId == null) {
+//            log.info("[CHAT-READ] Chat {} chưa có message nào", chatId);
+//            return;
+//        }
+//
+//        Message lastMessage = messageRepository
+//                .findTopByChatIdOrderByIdDesc(chatId)
+//                .orElse(null);
+//
+//        if (lastMessage == null) return;
+//
+//        LocalDateTime readAt = lastMessage.getSentAt();
+//
+//        Long oldLastRead = member.getLastReadMessageId();
+//        int oldUnread = member.getUnreadCount();
+//
+//        member.setUnreadCount(0);
+//        member.setLastReadMessageId(lastMessageId);
+////        member.set
+//        chatMemberRepository.save(member);
+//
+//        log.info(
+//                "[CHAT-READ] User {} đã đọc chat {} | lastRead: {} → {} | unread: {} → 0",
+//                userId,
+//                chatId,
+//                oldLastRead,
+//                lastMessageId,
+//                oldUnread
+//        );
+//
+//        // 🔔 notify realtime seen
+//        messagingTemplate.convertAndSend(
+//                "/topic/chat/" + chatId + "/read",
+//                new ChatReadStatusMsg(chatId, userId, lastMessageId,readAt)
+//        );
+//
+//        log.info(
+//                "[CHAT-READ][WS] Đã gửi SEEN realtime | chatId={} userId={} lastReadMessageId={}",
+//                chatId,
+//                userId,
+//                lastMessageId
+//        );
+//    }
+
+    @Override
+    @Transactional
+    public void markChatAsRead(Long chatId) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        log.info("[CHAT-READ] User {} bắt đầu đánh dấu đã đọc chat {}", userId, chatId);
+
+        ChatMember member = chatMemberRepository
+                .findByChatIdAndUserId(chatId, userId)
+                .orElseThrow(() -> {
+                    log.warn("[CHAT-READ] User {} không phải member của chat {}", userId, chatId);
+                    return new EntityNotFoundException("Không phải thành viên chat");
+                });
+
+        // Chat chưa có message → không cần xử lý
+        Message lastMessage = messageRepository
+                .findTopByChatIdOrderByIdDesc(chatId)
+                .orElse(null);
+
+        if (lastMessage == null) {
+            log.info("[CHAT-READ] Chat {} chưa có message nào", chatId);
+            return;
+        }
+
+        Long lastMessageId = lastMessage.getId();
+        LocalDateTime readAt = lastMessage.getSentAt();
+
+        int oldUnread = member.getUnreadCount();
+        Long oldLastRead = member.getLastReadMessageId();
+
+        // Đã đọc rồi → bỏ qua
+        if (oldUnread == 0 && Objects.equals(oldLastRead, lastMessageId)) {
+            return;
+        }
+
+        // Reset unread
+        member.setUnreadCount(0);
+        member.setLastReadMessageId(lastMessageId);
+        chatMemberRepository.save(member);
+
+        log.info(
+                "[CHAT-READ] User {} đọc chat {} | lastRead {} → {} | unread {} → 0",
+                userId, chatId, oldLastRead, lastMessageId, oldUnread
+        );
+
+        // 🔔 Push SEEN cho chat đang mở
+        messagingTemplate.convertAndSend(
+                "/topic/chat/" + chatId + "/read",
+                new ChatReadStatusMsg(chatId, userId, lastMessageId, readAt)
+        );
+
+        // 🔥 Push tổng unread mới (CHUẨN)
+        long totalUnread = chatMemberRepository
+                .sumUnreadMessagesByUserId(userId);
+
+        messagingTemplate.convertAndSendToUser(
+                member.getUser().getUsername(), // hoặc userId
+                "/queue/unread-sync",
+                totalUnread
+        );
+
+        log.info(
+                "[CHAT-READ][WS] unread-sync total={} cho user {}",
+                totalUnread, userId
+        );
+
+    }
+
+
+
 
     private ChatResponseDTO mapToResponse(Chat chat) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
@@ -101,6 +243,7 @@ public class ChatServiceImpl implements ChatService {
                     .orElse(null);
 
             if (friend != null) {
+                dto.setFriendUserId(friend.getId());
                 dto.setFullName(friend.getFullName());
                 dto.setAvatarUrl(friend.getAvatarUrl());
                 dto.setGender(friend.getGender() != null ? friend.getGender().name() : null);
@@ -113,6 +256,23 @@ public class ChatServiceImpl implements ChatService {
             dto.setFullName(chat.getChatName());
             dto.setAvatarUrl(null); // sau này có thể thêm avatar nhóm
             dto.setGender(null);
+        }
+
+
+        // ===== UNREAD COUNT (THEO USER HIỆN TẠI) =====
+        ChatMember me = chat.getMembers().stream()
+                .filter(cm -> cm.getUser().getId().equals(currentUserId))
+                .findFirst()
+                .orElse(null);
+
+        assert me != null;
+        dto.setUnreadCount(me.getUnreadCount());
+        Message lastMessage = messageRepository
+                .findTopByChatIdOrderByIdDesc(chat.getId())
+                .orElse(null);
+        if(lastMessage != null){
+            dto.setLastMessageContent(lastMessage.getContent());
+            dto.setLastMessageTime(lastMessage.getSentAt());
         }
 
         return dto;

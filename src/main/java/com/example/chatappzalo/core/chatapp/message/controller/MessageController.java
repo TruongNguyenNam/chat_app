@@ -2,6 +2,7 @@ package com.example.chatappzalo.core.chatapp.message.controller;
 
 import com.example.chatappzalo.core.chatapp.message.payload.MessageRequestDTO;
 import com.example.chatappzalo.core.chatapp.message.payload.MessageResponseDTO;
+import com.example.chatappzalo.entity.Message;
 import com.example.chatappzalo.infrastructure.utils.ResponseData;
 import com.example.chatappzalo.service.message.MessageService;
 import jakarta.persistence.EntityNotFoundException;
@@ -11,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,7 +28,7 @@ import java.util.List;
 public class MessageController {
 
     private final  MessageService messageService;
-
+    private final SimpMessagingTemplate messagingTemplate;
     @GetMapping("/chat/{chatId}")
     public ResponseData<List<MessageResponseDTO>> findByChatId(
             @PathVariable Long chatId
@@ -78,38 +80,25 @@ public class MessageController {
 
 
     // Đánh dấu tin nhắn đã đọc
-    @PutMapping("/{chatId}/read/{userId}")
-    public ResponseData<Void> markMessagesAsRead(
-            @PathVariable Long chatId,
-            @PathVariable Long userId) {
-        try {
-            messageService.markMessagesAsRead(userId, chatId);
-            return ResponseData.<Void>builder()
-                    .status(200)
-                    .message("Đã đánh dấu tất cả tin nhắn là đã đọc")
-                    .build();
-        } catch (EntityNotFoundException e) {
-            return ResponseData.<Void>builder()
-                    .status(404)
-                    .message(e.getMessage())
-                    .build();
-        } catch (Exception e) {
-            return ResponseData.<Void>builder()
-                    .status(500)
-                    .message("Đã xảy ra lỗi: " + e.getMessage())
-                    .build();
-        }
-    }
 
     @DeleteMapping("/chat/{messageId}")
-    public ResponseData<Void> delete(
-            @PathVariable(name = "messageId") Long messageId
-            ) {
-       messageService.deleteMessage(messageId);
-       return ResponseData.<Void>builder()
-               .message("đã xoá tin nhắn thành công")
-               .status(201)
-               .build();
+    public ResponseData<Void> deleteMessage(
+            @PathVariable Long messageId
+    ) {
+        //  Xoá (service đã check quyền)
+        Long chatId = messageService.deleteMessage(messageId);
+
+        //  Broadcast realtime (không return gì)
+        messagingTemplate.convertAndSend(
+                "/topic/chat/" + chatId + "/message-delete",
+                messageId
+        );
+
+        //  HTTP response vẫn là Void
+        return ResponseData.<Void>builder()
+                .status(200)
+                .message("Đã xoá tin nhắn thành công")
+                .build();
     }
 
 

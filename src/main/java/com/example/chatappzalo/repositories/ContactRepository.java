@@ -23,7 +23,6 @@ public interface ContactRepository extends JpaRepository<Contact,Long> {
 
 
 
-
     @Query("SELECT c FROM Contact c WHERE c.ContactType = 'ACCEPTED' AND (c.user.id = :userId OR c.friend.id = :userId)")
     List<Contact> findAcceptedContactsByUserId(@Param("userId") Long userId);
 

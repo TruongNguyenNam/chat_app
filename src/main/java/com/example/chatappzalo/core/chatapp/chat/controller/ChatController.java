@@ -6,6 +6,7 @@ import com.example.chatappzalo.core.chatapp.contact.payload.ContactResponseDTO;
 import com.example.chatappzalo.infrastructure.utils.ResponseData;
 import com.example.chatappzalo.service.chat.ChatService;
 import com.example.chatappzalo.service.contact.ContactService;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -32,6 +33,30 @@ public class ChatController {
     }
 
 
+    @PutMapping("/read/{chatId}")
+    public ResponseData<Void> markMessagesAsRead(
+            @PathVariable Long chatId
+    ) {
+        try {
+            chatService.markChatAsRead(chatId);
+            return ResponseData.<Void>builder()
+                    .status(200)
+                    .message("Đã đánh dấu tất cả tin nhắn là đã đọc")
+                    .build();
+        } catch (EntityNotFoundException e) {
+            return ResponseData.<Void>builder()
+                    .status(404)
+                    .message(e.getMessage())
+                    .build();
+        } catch (Exception e) {
+            return ResponseData.<Void>builder()
+                    .status(500)
+                    .message("Đã xảy ra lỗi: " + e.getMessage())
+                    .build();
+        }
+    }
+
+
 
     @GetMapping("/{chatId}")
     public ResponseData<ChatResponseDTO> findByChatId(@PathVariable(name = "chatId") Long chatId) {
@@ -55,6 +80,8 @@ public class ChatController {
                 .data(null)
                 .build();
     }
+
+
 
 
 

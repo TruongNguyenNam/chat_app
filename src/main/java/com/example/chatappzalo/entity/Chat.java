@@ -1,13 +1,12 @@
 package com.example.chatappzalo.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -31,6 +30,10 @@ public class Chat extends Auditable{
 
     @OneToMany(mappedBy = "chat", fetch = FetchType.LAZY)
     private Set<ChatMember> members = new HashSet<>();
+
+
+    @OneToMany(mappedBy = "chat",fetch = FetchType.LAZY)
+    private List<Message> messages = new ArrayList<>();
     public enum ChatType {
         PRIVATE, GROUP
     }

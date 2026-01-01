@@ -8,8 +8,6 @@ import java.util.List;
 
 public interface MessageReactionService {
 
-
-
     void sendMessageReaction(MessageReactionsRequestDTO messageReactionsRequestDTO);
 
 

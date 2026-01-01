@@ -48,7 +48,8 @@ public class Message extends Auditable{
 
 
     @Column(name = "is_read")
-    private boolean isRead = false;
+    private boolean isRead = false;  // chắc chắn sẽ bỏ trường này vì cái này chỉ
+                                     // 1 - 1, còn group thì sẽ không biết được đã đọc hay chưa
 
     public enum MessageType {
         TEXT, IMAGE, VIDEO, FILE, VOICE

@@ -26,6 +26,10 @@ public class ChatMember extends Auditable{
         @JoinColumn(name = "user_id")
         private User user;
 
+        @Column(nullable = false)
+        private int unreadCount = 0;  // tăng số lượng lên để realtime
+
+        private Long lastReadMessageId;  //
 
 }
 

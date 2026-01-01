@@ -122,7 +122,7 @@ public class IJWTTokenServiceImpl implements JWTTokenService {
             // 5️⃣ Tạo Principal (đại diện cho user trong Spring Security)
             UserPrincipal principal = new UserPrincipal(
                     userId,                               // id user
-                    username,// username (routing WS)
+                    username,   // username (routing WS)
                     fullName,
                     AuthorityUtils.createAuthorityList(role) // ROLE_*
             );

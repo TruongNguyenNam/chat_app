@@ -13,7 +13,6 @@ public interface NotificationRepository extends JpaRepository<Notification,Long>
 
     List<Notification> findByUserIdOrderByCreatedDateDesc(Long userId);
 
-
     @Query("""
     SELECT COUNT(n)
     FROM Notification n

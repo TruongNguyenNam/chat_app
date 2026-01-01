@@ -8,7 +8,7 @@ import java.util.Collection;
 public class UserPrincipal implements UserDetails {
     private final Long id;
     private final String username;
-    private final String fullName; // ⭐ thêm
+    private final String fullName; //  thêm
     private final Collection<? extends GrantedAuthority> authorities;
 
     public UserPrincipal(

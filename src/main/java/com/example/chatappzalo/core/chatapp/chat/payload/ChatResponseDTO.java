@@ -22,6 +22,8 @@ public class ChatResponseDTO {
 
     private String chatType;
 
+    private Long friendUserId;
+
     private String chatName;
 
     private String fullName;
@@ -33,5 +35,10 @@ public class ChatResponseDTO {
     private Boolean isOnline;
 
     private LocalDateTime lastActive;
+
+
+    private Integer unreadCount;
+    private String lastMessageContent;
+    private LocalDateTime lastMessageTime;
 
 }

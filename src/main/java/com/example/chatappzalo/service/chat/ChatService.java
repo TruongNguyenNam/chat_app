@@ -13,5 +13,6 @@ public interface ChatService {
 
     void createChatGroup(ChatRequestDTO chatRequestDTO);
 
+    void markChatAsRead(Long chatId);  // đọc tin nhắn
 
 }

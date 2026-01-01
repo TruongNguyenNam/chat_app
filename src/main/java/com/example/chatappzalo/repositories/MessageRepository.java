@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface MessageRepository extends JpaRepository<Message,Long> {
      List<Message> findBySenderId(Long senderId);
@@ -16,8 +17,14 @@ public interface MessageRepository extends JpaRepository<Message,Long> {
             )
     List<Message> findByChatId(@Param("chatId") Long chatId);
 
-    @Modifying
-    @Query("UPDATE Message m SET m.isRead = :isRead WHERE m.chat.id = :chatId AND m.sender.id != :userId")
-    void updateIsReadByChatIdAndSenderIdNot(Long chatId, Long userId, boolean isRead);
+
+
+//    @Modifying
+//    @Query("UPDATE Message m SET m.isRead = :isRead WHERE m.chat.id = :chatId AND m.sender.id != :userId")
+//    void updateIsReadByChatIdAndSenderIdNot(Long chatId, Long userId, boolean isRead);
+
+    Optional<Message> findTopByChatIdOrderByIdDesc(Long chatId);
+
+
 
 }

@@ -4,6 +4,7 @@ package com.example.chatappzalo.service.auth.impl;
 
 import com.example.chatappzalo.core.auth.payload.LoginInfoDto;
 import com.example.chatappzalo.core.auth.payload.RegisterForm;
+import com.example.chatappzalo.core.auth.payload.UserOnlineDTO;
 import com.example.chatappzalo.core.auth.payload.UserResponse;
 import com.example.chatappzalo.entity.Token;
 import com.example.chatappzalo.entity.User;
@@ -15,6 +16,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +30,6 @@ public class IAuthService implements AuthService {
 
     private final UserService service;
 
-
     private final ModelMapper modelMapper;
 
     private final UserRepository userRepository;
@@ -38,16 +39,43 @@ public class IAuthService implements AuthService {
     private final PasswordEncoder passwordEncoder;
 
 
+    @Async
+    @Override
+    public void markOnline(Long userId) {
+        userRepository.updateOnline(
+                userId,
+                true,
+                LocalDateTime.now()
+        );
+    }
+    @Async
+    @Override
+    public void markOffline(Long userId) {
+        userRepository.updateOffLine(
+                userId,
+                false,
+                LocalDateTime.now()
+        );
+    }
+
+    @Override
+    @Transactional
+    public List<UserOnlineDTO> findByIsOnlineTrue() {
+        return userRepository.findAllOnlineUsers()
+                .stream()
+                .map(u -> new UserOnlineDTO(
+                        u.getId(),
+                        u.getIsOnline(),
+                        u.getLastActive()
+                ))
+                .toList();
+    }
+
     @Override
     @Transactional
     public LoginInfoDto login(String username) {
 
         User entity = service.getAccountByUsername(username);
-
-        entity.setIsOnline(true);
-        entity.setLastLogin(LocalDateTime.now());
-        entity.setLastActive(LocalDateTime.now());
-        userRepository.save(entity);
 
         LoginInfoDto dto = modelMapper.map(entity, LoginInfoDto.class);
 
@@ -105,6 +133,7 @@ public class IAuthService implements AuthService {
 
         return modelMapper.map(user, LoginInfoDto.class);
     }
+
 
 
 }

@@ -17,6 +17,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping(value = "api/v1/auth")
 @Validated
@@ -83,14 +85,15 @@ public class AuthController {
         return new ResponseData<>(201, "Đăng Ký Thành công", userResponse);
     }
 
-
-
-//    @GetMapping("/phone")
-//    public ResponseData<LoginInfoDto> findByPhone(@RequestParam String phone){
-//        LoginInfoDto loginInfoDto = authService.findByPhone(phone);
-//        return new ResponseData<>(200, "tìm thấy người dùng", loginInfoDto);
-//
-//    } hàm này sẽ bỏ
+    @GetMapping("/online")
+    public ResponseData<List<UserOnlineDTO>> getAllUserIsOnline() {
+        List<UserOnlineDTO> userOnlineDTOS = authService.findByIsOnlineTrue();
+        return ResponseData.<List<UserOnlineDTO>>builder()
+                .status(201)
+                .message("lấy danh sách online thành công")
+                .data(userOnlineDTOS)
+                .build();
+    }
 
 
 
